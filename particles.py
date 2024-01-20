@@ -19,6 +19,7 @@ class Particle(pygame.sprite.Sprite):
 
 		self.gravity = 0.4
 		self.x_vel_change = x_vel_change
+
 	def update(self):
 		self.velocity[1] += self.gravity
 		self.velocity[0] += self.x_vel_change
@@ -26,6 +27,7 @@ class Particle(pygame.sprite.Sprite):
 		self.rect.y += self.velocity[1]
 		if not self.rect.colliderect(screen_rect):
 			self.kill()
+
 
 def create_particles(image, position, x_vel_change=0):
 	particle_count = 30

@@ -12,6 +12,9 @@ class MainCharacterData():
 	start_y: int = height - 250
 	speed: int = 400
 	gravity: int = 300
+	jump_power: int = 300
+	dash_power: int = 300
+	magic_cooldown: int = 2
 
 
 @dataclass(frozen=True)
@@ -20,7 +23,8 @@ class PureVesselData():
 	gravity: int = 1000
 	start_x: int = width - 300
 	speed: int = 1500
-	hp = 1000
+	hp: int = 1000
+	dash_power: int = 1000
 
 
 @dataclass(frozen=True)
@@ -29,7 +33,7 @@ class SoulWarriorData():
 	gravity: int = 1000
 	start_x: int = 700
 	speed: int = 100
-	hp = 500
+	hp: int = 500
 
 
 @dataclass(frozen=True)

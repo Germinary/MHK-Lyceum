@@ -2,7 +2,6 @@ import pygame
 import sys
 import os
 from config import config
-from time import sleep
 from random import randint, choice
 from share import *
 from characters import *
@@ -10,7 +9,6 @@ from utils import *
 from audio import *
 from particles import *
 from other import *
-
 
 LEVELS = [
 	['Тренировочная комната', '', 'level0'],
@@ -64,7 +62,6 @@ class Button(pygame.sprite.Sprite):
 		if self.rect.collidepoint(*event.pos):
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				sounds['ui'].play()
-				sleep(0.5)
 				game.go_to(self.go_to)
 
 
@@ -101,14 +98,14 @@ class Game():
 					if event.key == config['jump'] and player.on_ground():
 						sounds['jump'].play()
 						player.grounded = False
-						player.jump_fase = 0
+						player.jump_power = 0
 					if event.key == config['hit'] and player.attacks >= 150:
 						player.attacks = 0
 						sounds['sword'][randint(0, 4)].play()
-					if event.key == config['dash'] and player.dash >= 800:
+					if event.key == config['dash'] and player.dash_power >= 800:
 						sounds['dash'].play()
-						player.dash = 0
-					if event.key == config['magic'] and player.magic_cooldown >= 1000:
+						player.dash_power = 0
+					if event.key == config['magic'] and player.magic_cooldown >= 1:
 						sounds['magic'].play()
 						player.magic_cooldown = 0
 						if level != 0:
@@ -231,7 +228,6 @@ class Game():
 			text_size = 15
 			Button(*button, text_size, [x, y])
 
-
 		running = True
 
 		pygame.mixer.music.load(music['menu'])
@@ -245,6 +241,8 @@ class Game():
 					running = False
 				if event.type == pygame.MOUSEBUTTONDOWN:
 					all_sprites.update(event)
+				if event.type == pygame.KEYDOWN and event.key == config['exit']:
+					self.terminate()
 
 			clock.tick(FPS)
 			pygame.display.flip()

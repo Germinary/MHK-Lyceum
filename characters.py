@@ -14,6 +14,14 @@ class Character(pygame.sprite.Sprite):
 	def on_ground(self):
 		return self.rect.y + self.image.get_height() >= height - height * (1 / 6)
 
+	def mirror(self, *images):
+		mirrored = []
+		for i in images:
+			image = pygame.transform.flip(i, True, False)
+			mirrored.append(image)
+		return mirrored
+
+
 class Enemy(Character):
 	def __init__(self):
 		super().__init__()
@@ -27,6 +35,12 @@ class Enemy(Character):
 			x_vel_change=direction
 		)
 
+	def check_damage(self):
+		if self.rect.colliderect(self.target.rect) and self.target.attacks == 50:
+			a = self.rect.x + self.image.get_width() // 2 > self.target.rect.x + self.target.image.get_width() // 2
+			direction = 1 if a else -1
+			self.damage(direction, 25)
+
 
 class MainCharacter(Character):
 	default_ = load_image('images/hero.bmp', colorkey=-1)
@@ -34,10 +48,9 @@ class MainCharacter(Character):
 	attack_ = [load_image(f'images/hero_attack_{i}.bmp', colorkey=-1) for i in range(3)]
 
 	data = MainCharacterData()
-
 	def __init__(self):
 		super().__init__()
-		self.image = pygame.transform.flip(self.default_, True, False)
+		self.image = self.mirror(self.default_)[0]
 		self.rect = self.image.get_rect()
 		self.rect.x = self.data.start_x
 		self.rect.y = self.data.start_y
@@ -45,19 +58,19 @@ class MainCharacter(Character):
 		self.speed = self.data.speed
 		self.gravity = self.data.gravity
 
-		self.jump_fase = 300
+		self.jump_power = self.data.jump_power
 
 		self.attacks = 100
 
 		self.cur_frame = 0
 		self.frame = 0
 
-		self.dash = 300
+		self.dash_power = self.data.dash_power
 
 		self.is_moving = False
 		self.direction = 1
 		self.grounded = False
-		self.magic_cooldown = 1000
+		self.magic_cooldown = self.data.magic_cooldown
 
 		self.hp = 50
 		self.immunity_frames = 1
@@ -79,43 +92,48 @@ class MainCharacter(Character):
 	def update(self):
 		if self.recline != 0:
 			if self.recline < -0.25 or self.recline > 0.25:
-				self.dash = 300
+				self.dash_power = 300
 			self.recline -= self.recline / FPS * 4
 			if self.rect.colliderect(vis_screen_rect):
 				self.rect = self.rect.move(self.recline / FPS * 1500, 0)
-		if self.magic_cooldown < 1000:
-			self.magic_cooldown += 300 / FPS
-		if not self.grounded and self.on_ground() and self.jump_fase >= self.gravity:
+
+		if self.magic_cooldown < self.data.magic_cooldown:
+			self.magic_cooldown += 1 / FPS
+
+		if not self.grounded and self.on_ground() and self.jump_power >= self.gravity:
 			sounds['land'].play()
 			self.grounded = True
-		if not self.on_ground() and self.dash >= 300:
+
+		if not self.on_ground() and self.dash_power >= 300:
 			self.rect = self.rect.move(0, self.gravity / FPS)
+
 		if not self.is_moving:
 			if self.direction == -1:
 				self.image = self.default_
 			else:
-				mirrored = pygame.transform.flip(self.default_, True, False)
-				self.image = mirrored
+				self.image = self.mirror(self.default_)[0]
 
-		if self.jump_fase < self.gravity:
-			self.jump_fase += 200 / FPS * 4
-			if self.dash >= 300:
+		if self.jump_power < self.gravity:
+			self.jump_power += 200 / FPS * 4
+			if self.dash_power >= 300:
 				self.rect = self.rect.move(0, -250 / FPS * 3.5)
-				
+
 		if self.immunity_frames < 1:
 			self.immunity_frames += 1 / FPS
+
 		if self.attacks < 100:
 			frame = int(self.attacks // 40)
 			if self.direction == 1:
-				mirrored = [pygame.transform.flip(i, True, False) for i in self.attack_]
-				self.image = mirrored[frame]
+				self.image = self.mirror(*self.attack_)[frame]
 			else:
 				self.image = self.attack_[frame]
 			self.attacks += 300 / FPS
+
 		if self.attacks < 150:
 			self.attacks += 300 / FPS
-		if self.dash < 300:
-			self.jump_fase = 300
+
+		if self.dash_power < 300:
+			self.jump_power = 300
 			if self.direction == -1:
 				self.image = self.walk[0]
 			else:
@@ -123,9 +141,10 @@ class MainCharacter(Character):
 				self.image = mirrored
 			if not self.check_walls():
 				self.rect = self.rect.move(1000 / FPS * self.direction, 0)
-			self.dash += 900 / FPS
-		if self.dash < 800:
-			self.dash += 900 / FPS
+			self.dash_power += 900 / FPS
+
+		if self.dash_power < 800:
+			self.dash_power += 900 / FPS
 
 		if not self.heartbeat and self.hp == 20:
 			self.heartbeat = True
@@ -152,7 +171,7 @@ class MainCharacter(Character):
 				if self.direction == -1:
 					self.image = self.walk[self.cur_frame]
 				else:
-					mirrored = [pygame.transform.flip(i, True, False) for i in self.walk]
+					mirrored = self.mirror(*self.walk)
 					self.image = mirrored[self.cur_frame]
 				lim = len(self.walk)
 				self.cur_frame += 1
@@ -164,13 +183,14 @@ class PureVessel(Enemy):
 	default_ = load_image('images/pv_0.bmp', colorkey=-1)
 	attacks_ = [load_image(f'images/pv_{i}.bmp', colorkey=-1) for i in range(1, 4)]
 	data = PureVesselData()
+
 	def __init__(self):
 		super().__init__()
 		self.image = self.default_
 		self.rect = self.image.get_rect()
 		self.rect.x = self.data.start_x
 		self.rect.y = height - self.image.get_height() - 100
-		self.dash = 1000
+		self.dash_power = self.data.dash_power
 		self.direction = -1
 		self.speed = self.data.speed
 		self.attacks = False
@@ -180,29 +200,32 @@ class PureVessel(Enemy):
 		self.nails_buffer = []
 		self.sound_buffer = None
 		self.hp = self.data.hp
-		self.immunity_frames = 1000
+		self.gravity = self.data.gravity
+
 	def set_target(self, target):
 		self.target = target
 
 	def attack(self, type):
 		self.attacks = True
+
 		if type == 0:
 			if self.direction == -1:
 				self.rect.x = width - 300
 				self.image = self.attacks_[0]
 			else:
 				self.rect.x = 50
-				mirrored = pygame.transform.flip(self.attacks_[0], True, False)
-				self.image = mirrored
-			self.delay = 1000
-			self.dash = 0
+				self.image = self.mirror(*self.attacks_)[0]
+			self.delay = 1
+			self.dash_power = 0
 			self.sound_buffer = sounds['pv_attack']
+
 		if type == 1:
 			self.image = self.attacks_[1]
 			self.rect.x = self.target.rect.x + self.target.image.get_width() // 2 - self.image.get_width() // 2
 			self.rect.y = 25
-			self.delay = 500
+			self.delay = 0.5
 			self.sound_buffer = sounds['pv_attack']
+
 		if type == 2:
 			nails_coords = []
 			if self.direction == -1:
@@ -213,24 +236,20 @@ class PureVessel(Enemy):
 					y = (height - 280 * (height / 280)) + i * 125
 					nails_coords.append((x, y))
 			elif self.direction == 1:
-				mirrored = pygame.transform.flip(self.attacks_[2], True, False)
-				self.image = mirrored
+				self.image = self.mirror(*self.attacks_)[2]
 				self.rect.x = 50
 				for i in range(-1, 9):
 					x = self.rect.x + self.image.get_width() + 50
 					y = (height - 280 * (height / 280)) + i * 125
 					nails_coords.append((x, y))
-			self.delay = 1000
+			self.delay = 1
 			self.nails_buffer = nails_coords
 
-
 	def update(self):
-		if self.rect.colliderect(self.target.rect) and self.target.attacks == 50:
-			direction = 1 if self.rect.x + self.image.get_width() // 2 > self.target.rect.x + self.target.image.get_width() // 2 else -1
-			self.damage(direction, 25)
+		self.check_damage()
 
 		if self.delay > 0:
-			self.delay -= 1000 / FPS
+			self.delay -= 1 / FPS
 			return
 
 		if self.delay <= 0:
@@ -238,20 +257,19 @@ class PureVessel(Enemy):
 				self.sound_buffer.play()
 				self.sound_buffer = None
 
-		if self.dash < 1000:
+		if self.dash_power < self.data.dash_power:
 			self.rect = self.rect.move(self.direction * self.speed / FPS, 0)
-			self.dash += 2200 / FPS
+			self.dash_power += 2.2 * self.data.dash_power / FPS
 
-		if self.dash >= 1000 and self.on_ground():
+		if self.dash_power >= self.data.dash_power and self.on_ground():
 			self.attacks = False
 			if self.direction == -1:
 				self.image = self.default_
 			else:
-				mirrored = pygame.transform.flip(self.default_, True, False)
-				self.image = mirrored
+				self.image = self.mirror(self.default_)[0]
 
 		if not self.on_ground():
-			self.rect = self.rect.move(0, self.data.gravity / FPS)
+			self.rect = self.rect.move(0, self.gravity / FPS)
 
 		if self.last_attack < self.data.attacks_interval:
 			try:
@@ -275,26 +293,26 @@ class PureVessel(Enemy):
 			self.nails_buffer.clear()
 
 		if self.rect.colliderect(self.target.rect) and (self.attacks or not self.on_ground()) and self.target.immunity_frames >= 1:
-			direction = -1 if self.rect.x + self.image.get_width() // 2 > self.target.rect.x + self.target.image.get_width() // 2 else 1
+			a = self.rect.x + self.image.get_width() // 2 > self.target.rect.x + self.target.image.get_width() // 2
+			direction = -1 if a else 1
 			self.target.damage(direction, 10)
 
 
 class Xero(Enemy):
 	default_ = load_image('images/xero.bmp', colorkey=-1)
 	data = XeroData()
+
 	def __init__(self):
 		super().__init__()
 		self.image = self.default_
 		self.rect = self.image.get_rect()
 		self.rect.x = self.data.start_x
 		self.rect.y = self.data.start_y
-		self.direction = -1
 		self.speed_x = self.data.speed_x
 		self.speed_y = self.data.speed_y
-		self.nails_buffer = []
 		self.sound_buffer = None
-		self.hp = self.data.hp
 		self.last_attack = 0
+		self.hp = self.data.hp
 		self.direction_x = -1
 		self.direction_y = -1
 
@@ -305,11 +323,8 @@ class Xero(Enemy):
 		sides = [self.rect.x - 50, self.rect.x + self.image.get_width() + 50]
 		Bullet([choice(sides), 100], self.target)
 
-
 	def update(self):
-		if self.rect.colliderect(self.target.rect) and self.target.attacks == 50:
-			direction = 1 if self.rect.x + self.image.get_width() // 2 > self.target.rect.x + self.target.image.get_width() // 2 else -1
-			self.damage(direction, 25)
+		self.check_damage()
 
 		if self.last_attack < self.data.attacks_interval:
 			try:
@@ -324,16 +339,19 @@ class Xero(Enemy):
 
 		if self.rect.x <= 100:
 			self.direction_x = 1
+
 		elif self.rect.x + self.image.get_width() >= width - 100:
 			self.direction_x = -1
 
 		if self.rect.y <= height - 500:
 			self.direction_y = 1
+
 		elif self.rect.y >= height - 400:
 			self.direction_y = -1
 
 		x = self.direction_x * self.speed_x / FPS
 		y = self.direction_y * self.speed_y / FPS
+
 		self.rect = self.rect.move(x, y)
 
 
@@ -349,6 +367,7 @@ class SoulWarrior(Enemy):
 	]
 	magic_ = load_image('images/sw_2.bmp', colorkey=-1)
 	data = SoulWarriorData()
+
 	def __init__(self):
 		super().__init__()
 		self.image = self.default_[0]
@@ -357,11 +376,9 @@ class SoulWarrior(Enemy):
 		self.rect.y = height - self.image.get_height() - 100
 		self.direction = -1
 		self.speed = self.data.speed
-		self.attacks = 0
-		self.last_attack = 0
-		self.last_attack_type = 0
+		self.attacks = 1
 		self.delay = 0
-		self.magic_buffer = []
+		self.magic_buffer = None
 		self.sound_buffer = None
 		self.hp = self.data.hp
 		self.attack_frame = 0
@@ -373,32 +390,31 @@ class SoulWarrior(Enemy):
 
 	def attack(self, type):
 		if type == 0:
-			mirrored = pygame.transform.flip(self.attack_[0], True, False)
+			mirrored = self.mirror(*self.attack_)[0]
 			self.image = self.attack_[0] if self.direction == -1 else mirrored
-			self.delay = 350
-			self.attacks = 1
+			self.delay = 0.5
+			self.attacks = 0
 			self.sound_buffer = sounds['enemy_kick']
+
 		elif type == 1:
-			mirrored = pygame.transform.flip(self.magic_, True, False)
+			mirrored = self.mirror(self.magic_)[0]
 			self.image = self.magic_ if self.direction == -1 else mirrored
-			self.delay = 350
+			self.delay = 0.5
 			sounds['enemy_attack'].play()
 			if self.direction == -1:
 				x = self.rect.x - 50
 			else:
+				print(self.image)
 				x = self.rect.x + self.image.get_width() + 50
 			y = self.rect.y + self.image.get_height() // 2
-			self.magic_buffer.append((x, y))
-
+			self.magic_buffer = (x, y)
 
 	def update(self):
 		self.direction = 1 if self.target.rect.x > self.rect.x else -1
-		if self.rect.colliderect(self.target.rect) and self.target.attacks == 50:
-			direction = 1 if self.rect.x + self.image.get_width() // 2 > self.target.rect.x + self.target.image.get_width() // 2 else -1
-			self.damage(direction, 25)
+		self.check_damage()
 
 		if self.delay > 0:
-			self.delay -= 1000 / FPS
+			self.delay -= 1 / FPS
 			return
 
 		if self.delay <= 0:
@@ -406,41 +422,46 @@ class SoulWarrior(Enemy):
 				self.sound_buffer.play()
 				self.sound_buffer = None
 
+			if not self.magic_buffer is None:
+				SoulWarriorMagic(self.magic_buffer, self.direction, self.target)
+				self.magic_buffer = None
+				self.delay = 1
+				return
+
 		self.rect = self.rect.move(self.direction * self.speed / FPS, 0)
 
-		if self.rect.colliderect(self.target.rect) and self.attacks == 0:
+		if self.rect.colliderect(self.target.rect) and self.attacks == 1:
 			self.attack(0)
 
-		if self.rect.x + self.image.get_width() + 400 < self.target.rect.x or self.rect.x - 400 > self.target.rect.x and self.attacks == 0 and len(self.magic_buffer) == 0:
+		if self.rect.x + self.image.get_width() + 400 < self.target.rect.x or self.rect.x - 400 > self.target.rect.x and self.attacks == 1 and self.magic_buffer is None:
 			self.attack(1)
 
-		if self.attacks == 0:
+		if self.attacks >= 1:
 			self.frame += 1
+
 			if self.frame % 10 == 0:
 				self.cur_frame += 1
 				self.cur_frame -= len(self.default_) * (self.cur_frame // len(self.default_))
+
 				if self.direction == -1:
 					self.image = self.default_[self.cur_frame]
 				else:
-					mirrored = [pygame.transform.flip(i, True, False) for i in self.default_]
+					mirrored = self.mirror(*self.default_)
 					self.image = mirrored[self.cur_frame]
-		if self.attacks > 0:
+
+		if self.attacks < 1:
 			self.attack_frame += 12 / FPS
-			self.attacks -= 1 / FPS
-			mirrored = [pygame.transform.flip(i, True, False) for i in self.attack_]
+			self.attacks += 1 / FPS
+			mirrored = self.mirror(*self.attack_)
 			if self.attack_frame > 1:
 				self.image = self.attack_[1] if self.direction == -1 else mirrored[1]
 			if self.attack_frame > 2:
 				self.image = self.attack_[2] if self.direction == -1 else mirrored[2]
 			if self.attack_frame > 3:
-				self.attacks = 0
+				self.attacks = 1
 				self.attack_frame = 0
 
-		if len(self.magic_buffer) > 0:
-			SoulWarriorMagic(self.magic_buffer[0], self.direction, self.target)
-			self.magic_buffer.clear()
-			self.delay = 1000
-
-		if self.rect.colliderect(self.target.rect) and self.attacks > 0 and self.attacks < 0.9 and self.target.immunity_frames >= 1:
-			direction = -1 if self.rect.x + self.image.get_width() // 2 > self.target.rect.x + self.target.image.get_width() // 2 else 1
+		if self.rect.colliderect(self.target.rect) and self.attacks < 1 and self.attacks > 0.1 and self.target.immunity_frames >= 1:
+			a = self.rect.x + self.image.get_width() // 2 > self.target.rect.x + self.target.image.get_width() // 2
+			direction = -1 if a else 1
 			self.target.damage(direction, 10)
