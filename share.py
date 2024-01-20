@@ -1,7 +1,8 @@
 import pygame
+from config import config
 
 pygame.init()
-width, height = 1280, 720
+width, height = config['width'], config['height']
 
 size = width, height
 

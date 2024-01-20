@@ -1,6 +1,6 @@
 import pygame
 from random import randint, choice
-from collections_ import *
+from share import *
 from utils import *
 from const import *
 

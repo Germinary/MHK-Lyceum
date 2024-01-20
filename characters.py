@@ -1,10 +1,11 @@
 import pygame
 from const import *
-from collections_ import *
+from share import *
 from utils import *
 from audio import *
 from particles import *
 from other import *
+
 
 class Character(pygame.sprite.Sprite):
 	def __init__(self):
@@ -95,10 +96,12 @@ class MainCharacter(Character):
 			else:
 				mirrored = pygame.transform.flip(self.default_, True, False)
 				self.image = mirrored
+
 		if self.jump_fase < self.gravity:
 			self.jump_fase += 200 / FPS * 4
 			if self.dash >= 300:
 				self.rect = self.rect.move(0, -250 / FPS * 3.5)
+				
 		if self.immunity_frames < 1:
 			self.immunity_frames += 1 / FPS
 		if self.attacks < 100:
@@ -257,7 +260,7 @@ class PureVessel(Enemy):
 				pass
 
 		if self.last_attack >= self.data.attacks_interval:
-			sounds['teleport_out'].play()
+			sounds['teleport'].play()
 			self.direction = -1 if randint(0, 1) == 0 else 1
 			type = randint(0, 2)
 			while type == self.last_attack_type:
@@ -271,7 +274,7 @@ class PureVessel(Enemy):
 				Nail(i, self.direction, self.target)
 			self.nails_buffer.clear()
 
-		if self.rect.colliderect(self.target.rect) and self.attacks and self.target.immunity_frames >= 1:
+		if self.rect.colliderect(self.target.rect) and (self.attacks or not self.on_ground()) and self.target.immunity_frames >= 1:
 			direction = -1 if self.rect.x + self.image.get_width() // 2 > self.target.rect.x + self.target.image.get_width() // 2 else 1
 			self.target.damage(direction, 10)
 
@@ -315,7 +318,7 @@ class Xero(Enemy):
 				pass
 
 		if self.last_attack >= self.data.attacks_interval:
-			sounds['teleport_out'].play()
+			sounds['enemy_attack'].play()
 			self.attack()
 			self.last_attack = 0
 
@@ -374,10 +377,12 @@ class SoulWarrior(Enemy):
 			self.image = self.attack_[0] if self.direction == -1 else mirrored
 			self.delay = 350
 			self.attacks = 1
+			self.sound_buffer = sounds['enemy_kick']
 		elif type == 1:
 			mirrored = pygame.transform.flip(self.magic_, True, False)
 			self.image = self.magic_ if self.direction == -1 else mirrored
 			self.delay = 350
+			sounds['enemy_attack'].play()
 			if self.direction == -1:
 				x = self.rect.x - 50
 			else:

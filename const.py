@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from collections_ import *
+from share import *
 
 FPS = 60
 FONT_NAME = 'data/other/font.ttf'
@@ -13,6 +13,7 @@ class MainCharacterData():
 	speed: int = 400
 	gravity: int = 300
 
+
 @dataclass(frozen=True)
 class PureVesselData():
 	attacks_interval: int = 1
@@ -21,6 +22,7 @@ class PureVesselData():
 	speed: int = 1500
 	hp = 1000
 
+
 @dataclass(frozen=True)
 class SoulWarriorData():
 	attacks_interval: int = 2
@@ -28,6 +30,7 @@ class SoulWarriorData():
 	start_x: int = 700
 	speed: int = 100
 	hp = 500
+
 
 @dataclass(frozen=True)
 class XeroData():
@@ -38,14 +41,17 @@ class XeroData():
 	speed_y: int = 100
 	hp: int = 750
 
+
 @dataclass(frozen=True)
 class MaskData():
 	start_x: int = 50
 	y: int = 50
 
+
 @dataclass(frozen=True)
 class BulletData():
 	speed: int = 800
+
 
 @dataclass(frozen=True)
 class SoulWarriorMagicData():

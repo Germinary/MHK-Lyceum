@@ -1,12 +1,11 @@
 import pygame
 from const import *
-from collections_ import *
+from share import *
 from utils import *
 from particles import *
-#from audio import *
-
 
 masks = pygame.sprite.Group()
+
 
 class Mask(pygame.sprite.Sprite):
 	default_ = load_image('images/mask.bmp', colorkey=-1)
@@ -31,6 +30,7 @@ def create_masks():
 
 class Magic(pygame.sprite.Sprite):
 	images = [load_image(f'images/magic_{i}.bmp', colorkey=-1) for i in range(3)]
+
 	def __init__(self, direction, pos, target):
 		super().__init__(all_sprites)
 		if direction == 1:
@@ -46,6 +46,7 @@ class Magic(pygame.sprite.Sprite):
 		self.direction = direction
 		self.v = 1200
 		self.target = target
+
 	def update(self):
 		self.frame += 1
 		if self.frame % 4 == 0:
@@ -65,8 +66,10 @@ class Magic(pygame.sprite.Sprite):
 		except AttributeError:
 			pass
 
+
 class Nail(pygame.sprite.Sprite):
 	image = load_image('images/nail.bmp', colorkey=-1)
+
 	def __init__(self, coords, direction, target):
 		super().__init__(all_sprites)
 		self.direction = direction
@@ -94,6 +97,7 @@ class Nail(pygame.sprite.Sprite):
 class Bullet(pygame.sprite.Sprite):
 	images = [load_image(f'images/bullet_{i}.bmp', colorkey=-1) for i in range(2)]
 	data = BulletData()
+
 	def __init__(self, coords, target):
 		super().__init__(all_sprites)
 		self.target = target
@@ -129,6 +133,7 @@ class Bullet(pygame.sprite.Sprite):
 class SoulWarriorMagic(pygame.sprite.Sprite):
 	images = [load_image(f'images/bullet_{i}.bmp', colorkey=-1) for i in range(2)]
 	data = SoulWarriorMagicData()
+
 	def __init__(self, coords, direction, target):
 		super().__init__(all_sprites)
 		self.target = target
